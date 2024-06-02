@@ -40,7 +40,7 @@ export async function POST(request: Request) {
             }
         }else { //if the user's email doesn't exits make a fresh user
             const hashedPassword =await bcrypt.hash(password, 10);
-            const expiryDate = new Date()
+            const expiryDate = new Date();
             expiryDate.setHours(expiryDate.getHours() + 1);
 
             const newUser = new UserModel({

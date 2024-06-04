@@ -2,9 +2,7 @@ import dbConnect from '@/lib/dbConnect';
 import UserModel from '@/models/user.model';
 import bcrypt  from 'bcryptjs';
 import { NextAuthOptions } from "next-auth";
-import Credentials from "next-auth/providers/credentials";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { ApiError } from 'next/dist/server/api-utils';
 
 
 export const authOptions: NextAuthOptions = {
@@ -74,9 +72,9 @@ export const authOptions: NextAuthOptions = {
     pages: {
         signIn: '/signin',
     },
+    secret: process.env.NEXTAUTH_SECRET,
     session: {
         strategy: "jwt"
-    },
-    secret: process.env.NEXTAUTH_SECRET
+    }
 }
 

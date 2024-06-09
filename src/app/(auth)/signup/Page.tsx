@@ -3,14 +3,14 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
 import Link from "next/link"
+import { useDebounceValue  } from 'usehooks-ts';
 import { useEffect, useState } from "react"
-import { useDebounceCallback} from 'usehooks-ts'
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
 import { SignupSchema } from "@/schemas/signupSchema"
 import axios, { AxiosError } from 'axios';
 import { ApiResponse } from "@/types/ApiResponse"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
@@ -22,7 +22,7 @@ export default function SignUpForm() {
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const debounced = useDebounceCallback(setUsername, 400);
+  const debouncedUsername = useDebounceValue(username, 300);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -38,12 +38,14 @@ export default function SignUpForm() {
 
   useEffect(() => {
     const checkUsernameUnique =async () => {
-      if (username) {
+      if (debouncedUsername) {
         setIsCheckingUsername(true);
-        setUsernameMsg('');
+        setUsernameMsg('');//Reset message
       }
       try {
-        const response = await axios.get(`/api/username-unique?username=${username}`);
+        const response = await axios.get(
+          `/api/username-unique?username=${username}`
+        );
         setUsernameMsg(response.data.message)
       } catch (error) {
         const axiosError = error as AxiosError<ApiResponse>;
@@ -55,7 +57,7 @@ export default function SignUpForm() {
       }
     }
     checkUsernameUnique();
-  }, [username])
+  }, [debouncedUsername]);
 
   const onSubmit = async (data: z.infer<typeof SignupSchema>) => {
     setIsSubmitting(true);
@@ -66,12 +68,17 @@ export default function SignUpForm() {
         title: 'Success',
         description: response.data.message
       })
-      router.replace(`/verify-code/${username}`)
+
+      router.replace(`/verify/${username}`)
+
       setIsSubmitting(false);
     } catch (error) {
-      console.error("Error in signup of user: ", error)
+      console.error("Error in signup of user: ", error);
+
       const axiosError = error as AxiosError<ApiResponse>;
+
       let errorMsg = axiosError.response?.data.message;
+                ('There is a problem with your sign-up. Please try again')
       toast({
         variant: "destructive",
         title: "Signup failed.",
@@ -98,19 +105,24 @@ export default function SignUpForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Username</FormLabel>
-                  <FormControl>
                     <Input placeholder="username" 
                     {...field}
                     onChange={(e) => {
                       field.onChange(e)
-                      debounced(e.target.value)
+                      setUsername(e.target.value)
                     }}
                     />
-                  </FormControl>
                     { isCheckingUsername && <Loader2 className="animate-spin" /> }
-                    <p className={`text-sm ${usernameMsg === "Username is unique" ? 'text-green-500' : 'text-red-500' }`}>
+                    {!isCheckingUsername && usernameMsg &&( 
+                    <p 
+                      className={`text-sm ${
+                        usernameMsg === "Username is unique" 
+                          ? 'text-green-500' 
+                          : 'text-red-500' 
+                          }`}>
                       {usernameMsg}
                     </p>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
@@ -121,9 +133,8 @@ export default function SignUpForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Email</FormLabel>
-                  <FormControl>
                     <Input placeholder="email" {...field} />
-                  </FormControl>
+                  <p className='text-muted text-gray-400 text-sm'>We will send you a verification code</p>
                   <FormMessage />
                 </FormItem>
               )}
@@ -134,18 +145,17 @@ export default function SignUpForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Password</FormLabel>
-                  <FormControl>
                     <Input type="password" placeholder="password" {...field} />
-                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
         />
-        <Button type="submit" disabled={isSubmitting}>
+        <Button type="submit" className='w-full' disabled={isSubmitting}>
               {
                 isSubmitting ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Please wait
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
+                    Please wait
                   </>
                 ) : ('Signup')
               }
@@ -155,7 +165,7 @@ export default function SignUpForm() {
           <div className="text-center mt-4">
           <p>
             Already a member?{' '}
-            <Link href="/sign-in" className="text-blue-600 hover:text-blue-800">
+            <Link href="/signin" className="text-blue-600 hover:text-blue-800">
               Sign in
             </Link>
           </p>

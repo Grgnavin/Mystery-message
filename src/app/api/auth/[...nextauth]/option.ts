@@ -22,20 +22,23 @@ export const authOptions: NextAuthOptions = {
                 try {
                     const user = await UserModel.findOne({
                         $or: [ 
-                            { email: credentials.email },
-                            { username: credentials.username }
+                            { email: credentials.identifier },
+                            { username: credentials.identifier }
                         ]
                     })
 
                     if (!user) {
-                        throw new Error("No user with this email or username was found")
+                        throw new Error("No user found with this email or username")
                     }
 
                     if (!user.isVerified) {
                         throw new Error("Please verify your account first")
                     }
 
-                    const isPassCorrect = await bcrypt.compare(credentials.password, user.password)
+                    const isPassCorrect = await bcrypt.compare(
+                        credentials.password,
+                        user.password
+                    );
 
                     if (isPassCorrect) {
                         return user

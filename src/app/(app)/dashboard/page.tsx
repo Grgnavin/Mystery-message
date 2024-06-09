@@ -32,20 +32,21 @@ const Dashboard = () => {
     resolver: zodResolver(AcceptMessageSchema)
   })
 
-  const { register, watch, setValue } = useForm();
-
+  const { register, watch, setValue } = form;
   const acceptMessages = watch('acceptMessages');
 
   const fetchAcceptMessages  = useCallback(async() => {
     setIsSwitchLoading(true);
     try {
       const response = await axios.get<ApiResponse>('/api/accept-message');
-      setValue('acceptMessages', response.data.isAcceptingMessage);
+      setValue('acceptMessages', response.data?.isAcceptingMessage);
     } catch (error) {
       const axiosError = error as AxiosError<ApiResponse>;
       toast({
         title: "Error",
-        description: axiosError.response?.data.message || "Failed to fetch the message",
+        description: 
+              axiosError.response?.data.message 
+              ?? "Failed to fetch the message",
         variant: "destructive"
       })
     }finally{
@@ -53,39 +54,41 @@ const Dashboard = () => {
     }
   }, [setValue, toast])
 
-  const fetchAllMessages = useCallback(async(refresh: boolean = false) => {
-    setIsLoading(true);
-    setIsSwitchLoading(true);
-    try {
-      const response = await axios.get<ApiResponse>('/api/get-messages');
-      setMessages(response.data.messages || [])
+  const fetchAllMessages = useCallback(
+    async(refresh: boolean = false) => {
+      setIsLoading(true);
+      setIsSwitchLoading(true);
+      try {
+        const response = await axios.get<ApiResponse>('/api/get-messages');
+        setMessages(response.data.messages || [])
 
-      if (refresh) {
+        if (refresh) {
+          toast({
+            title: "Refreshsed messages",
+            description:  "Showing latest messages",
+            variant: "default"
+          })
+        }
+      } catch (error) {
+        const axiosError = error as AxiosError<ApiResponse>;
         toast({
-          title: "Refreshsed messages",
-          description:  "Showing latest messages",
-          variant: "default"
+          title: "Error",
+          description: 
+                axiosError.response?.data.message 
+                ?? "Failed to fetch the message",
+          variant: "destructive"
         })
+      }finally{
+      setIsLoading(false);
+        setIsSwitchLoading(false)
       }
-
-    } catch (error) {
-      const axiosError = error as AxiosError<ApiResponse>;
-      toast({
-        title: "Error",
-        description: axiosError.response?.data.message || "Failed to fetch the message",
-        variant: "destructive"
-      })
-    }finally{
-    setIsLoading(false);
-      setIsSwitchLoading(false)
-    }
   }, [setIsLoading, setMessages, toast])
 
   useEffect(() => {
     if (!session || !session.user) return
     fetchAllMessages();
     fetchAcceptMessages();
-  }, [session, setValue, fetchAcceptMessages, fetchAllMessages]) 
+  }, [session, setValue, toast, fetchAcceptMessages, fetchAllMessages]) 
 
   //handle switch chnage 
   const handleSwitchChange = async () => {
@@ -99,26 +102,28 @@ const Dashboard = () => {
       const axiosError = error as AxiosError<ApiResponse>;
       toast({
         title: "Error",
-        description: axiosError.response?.data.message || "Failed to fetch the message",
+        description: 
+            axiosError.response?.data.message ??
+            "Failed to fetch the message",
         variant: "destructive"
       })
     }
   }
 
-  const { username } = session?.user as User;
+  if (!session || !session.user) {
+    return <div>Please Login</div>
+  }
+
+  const { username } = session?.user ;
   const baseUrl = `${window.location.protocol}//${window.location.host}`;
   const profileUrl = `${baseUrl}/u/${username}`
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(profileUrl)
     toast({
-      title: "URL Copied",
-      description: "Profile url has been copied to clipboard"
+      title: "URL Copied!!",
+      description: "Profile url has been copied to clipboard..."
     })
-  }
-
-  if (!session || !session.user) {
-    return <div>Please Login</div>
   }
 
   return (
@@ -166,7 +171,7 @@ const Dashboard = () => {
       </Button>
       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
         {messages.length > 0 ? (
-          messages.map((message, index) => (
+          messages.map((message) => (
             <MessageCard
               key={message._id}
               message={message}

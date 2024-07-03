@@ -3,15 +3,16 @@ import { authOptions } from "../auth/[...nextauth]/option";
 import dbConnect from "@/lib/dbConnect";
 import UserModel from "@/models/user.model";
 import { User } from "next-auth";
+import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 
 export async function POST(request: Request) {
     await dbConnect();
 
     const session = await getServerSession(authOptions);
     const user: User = session?.user;
-
     if (!session || !session.user) {
-        return Response.json(
+        return NextResponse.json(
             {
                 success: false,
                 message: "Not authenticated"
@@ -20,43 +21,43 @@ export async function POST(request: Request) {
         )
     }
 
-    const userId = user._id
     const { acceptMessages } = await request.json();
-
+    const userId = new mongoose.Schema.ObjectId(user._id || '');
+    
     try {
-        const updatedUser = await UserModel.findByIdAndUpdate(userId, 
+        const user = await UserModel.findByIdAndUpdate(
+            userId, 
             {
                 isAcceptingMsg: acceptMessages
             },
             { new: true }
         );
 
-        if (!updatedUser) {
-            return Response.json(
+        if (!user) {
+            return NextResponse.json(
                 {
                     success: false,
-                    message: "Failed to update user status to accept messages"
+                    message: "User not found"
                 },
                 { status: 401 }
             )
         }
 
-        return Response.json(
+        return NextResponse.json(
             {
                 success: true,
-                message: "Message acceptance status updated successfully",
-                updatedUser
+                message: `Message acceptance status updated to ${acceptMessages}`,
+                user
             },
-            { status: 201 }
+            { status: 200 }
         )
 
     } catch (error) {
-        console.log("Failed to update user status to accept messages");
-        
-        return Response.json(
+        console.log("Failed to update user status to accept messages", error);
+        return NextResponse.json(
             {
                 success: false,
-                message: "Failed to update user status to accept messages"
+                message: "Unexpected Error occurred"
             },
             { status: 500 }
         )
@@ -71,7 +72,7 @@ export async function GET(request: Request) {
     const user: User = session?.user;
 
     if (!session || !session.user) {
-        return Response.json(
+        return NextResponse.json(
             {
                 success: false,
                 message: "Not authenticated"
@@ -80,12 +81,12 @@ export async function GET(request: Request) {
         )
     }
 
-    const userId = user._id;
+    const userId = new mongoose.Schema.ObjectId(user._id || '');
     try {
-        const foundUser = await UserModel.findById(userId);
+        const user = await UserModel.findById(userId);
     
-        if (!foundUser) {
-            return Response.json(
+        if (!user) {
+            return NextResponse.json(
                 {
                     success: false,
                     message: "User not found"
@@ -94,20 +95,20 @@ export async function GET(request: Request) {
             )
         }
     
-        return Response.json(
+        return NextResponse.json(
             {
                 success: true,
-                isAcceptingMsg: foundUser.isAcceptingMsg
+                isAcceptingMsg: user.isAcceptingMsg
             },
-            { status: 202 }
+            { status: 200 }
         )
     } catch (error) {
-        console.log("Error in geeting mesage aceptance");
+        console.log("Error in getting message acceptance", error);
         
-        return Response.json(
+        return NextResponse.json(
             {
                 success: false,
-                message: "Error in getting message acceptance status"
+                message: "Unexpected Error occurred"
             },
             { status: 500 }
         )
